@@ -3,6 +3,7 @@ package com.daigorian.epcltvapp
 import android.graphics.drawable.Drawable
 import android.util.Log
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -15,6 +16,13 @@ import com.daigorian.epcltvapp.epgstationv2caller.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.time.Duration
+import java.time.Instant
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.properties.Delegates
 
 /**
@@ -45,6 +53,9 @@ class OriginalCardPresenter() : Presenter() {
                 super.setSelected(selected)
             }
         }
+
+        cardView.findViewById<TextView>(R.id.title_text).maxLines = 3    //番組カードのタイトルの最大表示行数
+        cardView.findViewById<TextView>(R.id.content_text).maxLines = 4  //番組カードの説明文の最大表示行数
 
         cardView.isFocusable = true
         cardView.isFocusableInTouchMode = true
@@ -139,7 +150,10 @@ class OriginalCardPresenter() : Presenter() {
             is RecordedProgram -> {
                 // EPGStation Version 1.x.x
                 cardView.titleText = item.name
-                cardView.contentText = item.description
+
+                // 開始時間（JST), 録画時間、説明
+                cardView.contentText = "${formatAsJapaneseTime(item.startAt)}~ (${formatDurationBetweenUnixTimeMs(item.startAt,item.endAt)})m \n ${item.description}";
+
                 val thumbnailURL = EpgStation.getThumbnailURL(item.id.toString())
 
                 //Glideでイメージを取得する際にBasic認証が必要な場合はヘッダを付与してやる
@@ -157,9 +171,13 @@ class OriginalCardPresenter() : Presenter() {
 
             }
             is RecordedItem -> {
+
                 // EPGStation Version 2.x.x
                 cardView.titleText = item.name
-                cardView.contentText = item.description
+
+                // 開始時間（JST), 録画時間、説明
+                cardView.contentText = "${formatAsJapaneseTime(item.startAt)}~ (${formatDurationBetweenUnixTimeMs(item.startAt,item.endAt)}) \n ${item.description}";
+
                 //サムネのURLから画像をロードする。失敗した場合、録画中なら録画中アイコンを出す。そうでなければNO IMAGEアイコン。
 
                 val thumbnailURL = if(!item.thumbnails.isNullOrEmpty()){
@@ -208,6 +226,26 @@ class OriginalCardPresenter() : Presenter() {
         view.setBackgroundColor(color)
         view.setInfoAreaBackgroundColor(color)
     }
+
+
+    // Unixtime(ms)から日本時間でのstringに変換
+    private fun formatAsJapaneseTime(unixTimeMs: Long): String {
+//        val formatter = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.JAPANESE)
+        val formatter = SimpleDateFormat("MM/dd (EEE) HH:mm")
+        formatter.timeZone = TimeZone.getTimeZone("Asia/Tokyo")
+        return formatter.format(Date(unixTimeMs))
+    }
+
+    // Unixtime(ms)同士を比較して番組時間を分で表示
+    private fun formatDurationBetweenUnixTimeMs(startUnixTimeMs: Long, endUnixTimeMs: Long): String {
+        val startInstant = Instant.ofEpochMilli(startUnixTimeMs)
+        val endInstant = Instant.ofEpochMilli(endUnixTimeMs)
+        val duration = Duration.between(startInstant,endInstant)
+
+        return "${duration.toMinutes()}m"
+    }
+
+
 
     companion object {
         private const val TAG = "OriginalCardPresenter"

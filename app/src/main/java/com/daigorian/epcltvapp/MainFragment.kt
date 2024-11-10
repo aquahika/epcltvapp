@@ -618,7 +618,7 @@ class MainFragment : BrowseSupportFragment() {
     private fun startBackgroundTimer() {
         mBackgroundTimer?.cancel()
         mBackgroundTimer = Timer()
-        mBackgroundTimer?.schedule(UpdateBackgroundTask(), BACKGROUND_UPDATE_DELAY.toLong())
+//        mBackgroundTimer?.schedule(UpdateBackgroundTask(), BACKGROUND_UPDATE_DELAY.toLong())  //背景アップデードのタイマーをスタート
     }
 
     private inner class UpdateBackgroundTask : TimerTask() {
